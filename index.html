@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#140a26">
+<title>Матрица судьбы</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --violet-950: #140a26;
+    --violet-900: #1b0f31;
+    --violet-700: #321b57;
+    --violet-500: #7c3aed;
+    --violet-400: #a855f7;
+    --magenta: #d946ef;
+    --lav-050: #f7f3ff;
+    --lav-100: #efe6ff;
+    --lav-200: #e0d0ff;
+    --lav-300: #c9b0f7;
+    --ink: #20113a;
+    --muted: #6f5f8c;
+    --line: #e4d8ff;
+    --err: #e2457a;
+    --font: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+    --mono: "SF Mono", "JetBrains Mono", "Cascadia Code", monospace;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--violet-950);
+    color: var(--ink);
+    overscroll-behavior: none;
+  }
+
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--lav-050);
+    max-width: 520px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* header */
+  .top {
+    flex: none;
+    padding: calc(var(--safe-t) + 10px) 16px 12px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 58px;
+  }
+  .top .back {
+    width: 34px; height: 34px; border-radius: 11px; border: none;
+    background: rgba(124,58,237,.1); color: var(--violet-500);
+    display: none; align-items: center; justify-content: center; flex: none;
+    cursor: pointer;
+  }
+  .top .back.on { display: flex; }
+  .top .back svg { width: 17px; height: 17px; }
+  .top .ava {
+    width: 36px; height: 36px; border-radius: 12px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(140deg, var(--violet-500), var(--magenta)); color: #fff;
+  }
+  .top .ava svg { width: 19px; height: 19px; }
+  .top .who { flex: 1; min-width: 0; }
+  .top .nm { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top .st { font-size: 10.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .top .st .live { width: 5px; height: 5px; border-radius: 50%; background: #37c98a; }
+
+  /* views */
+  .view { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; flex-direction: column; padding: 20px 16px calc(var(--safe-b) + 24px); gap: 14px; }
+  .view.on { display: flex; }
+
+  .hero-h { font-family: var(--serif); font-size: 36px; line-height: 1.04; letter-spacing: -.02em; }
+  .hero-p { font-size: 13px; line-height: 1.55; color: var(--muted); margin-top: 10px; }
+
+  .fieldwrap { display: flex; flex-direction: column; gap: 8px; }
+  .field {
+    background: #fff; border: 1.5px solid var(--violet-500); border-radius: 15px;
+    padding: 17px 16px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 0 0 4px rgba(124,58,237,.10);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-family: var(--mono); font-size: 25px; letter-spacing: .07em; color: var(--ink);
+    min-width: 0;
+  }
+  .field input::placeholder { color: #bfb0d8; }
+  .field svg { width: 19px; height: 19px; color: var(--violet-500); flex: none; }
+  .field.err { border-color: var(--err); box-shadow: 0 0 0 4px rgba(226,69,122,.12); }
+  .field.err svg { color: var(--err); }
+
+  .btn {
+    border: none; width: 100%; height: 50px; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--font); font-size: 14px; font-weight: 600; color: #fff;
+    background: linear-gradient(120deg, var(--violet-500), var(--magenta));
+    box-shadow: 0 12px 24px rgba(124,58,237,.32); cursor: pointer;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn svg { width: 17px; height: 17px; }
+  .btn.ghost { background: rgba(124,58,237,.1); color: #5b3b9c; box-shadow: none; }
+  .btn.sm { height: 44px; font-size: 13px; border-radius: 13px; }
+  .btn[disabled] { opacity: .55; }
+
+  .feat { display: flex; gap: 7px; }
+  .feat span {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-size: 10.5px; padding: 8px 4px; border-radius: 11px;
+    background: rgba(124,58,237,.08); color: #5b3b9c;
+  }
+  .feat span svg { width: 12px; height: 12px; }
+
+  /* tiles */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile {
+    position: relative; overflow: hidden;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px; display: flex; gap: 10px; align-items: flex-start; text-align: left;
+    cursor: pointer; font-family: var(--font);
+  }
+  .tile::before {
+    content: ""; position: absolute; inset: 0; z-index: 0;
+    background: linear-gradient(140deg, var(--violet-500), var(--magenta));
+    opacity: 0; transition: opacity .26s ease;
+  }
+  .tile > span { position: relative; z-index: 1; }
+  .tile.core::before { opacity: 1; }
+  .tile.core { border-color: transparent; color: #fff; }
+  .tile:active { background: var(--lav-100); }
+  .tile .n { font-family: var(--serif); font-size: 22px; line-height: 1; min-width: 26px; color: var(--violet-500); }
+  .tile.core .n { color: #fff; }
+  .tile .t { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .tile.core .t { color: rgba(255,255,255,.75); }
+  .tile .a { font-size: 11.5px; font-weight: 600; margin-top: 2px; line-height: 1.2; }
+  .tile.core .a { color: #fff; }
+
+  .block { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .block summary {
+    list-style: none; display: flex; align-items: center; gap: 10px;
+    padding: 13px 13px; cursor: pointer; font-size: 12.5px;
+  }
+  .block summary::-webkit-details-marker { display: none; }
+  .block .num {
+    width: 28px; height: 28px; border-radius: 9px; flex: none;
+    background: rgba(124,58,237,.1); color: var(--violet-500);
+    display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 13px;
+  }
+  .block .tx { flex: 1; line-height: 1.25; }
+  .block .tx small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .block .ch { width: 14px; height: 14px; color: var(--lav-300); transition: transform .2s; }
+  .block[open] .ch { transform: rotate(-90deg); }
+  .block .body { padding: 0 14px 14px; font-size: 12.5px; line-height: 1.62; color: #43325f; }
+
+  .row {
+    display: flex; align-items: center; gap: 10px; background: #fff;
+    border: 1px solid var(--line); border-radius: 13px; padding: 12px 13px;
+    cursor: pointer; text-align: left; width: 100%; font-family: var(--font);
+  }
+  .row .num {
+    width: 30px; height: 30px; border-radius: 9px; flex: none; background: rgba(124,58,237,.1);
+    color: var(--violet-500); display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 13px;
+  }
+  .row .tx { flex: 1; font-size: 12px; line-height: 1.3; }
+  .row .tx small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .row .ch { width: 14px; height: 14px; color: var(--lav-300); transform: rotate(180deg); }
+
+  .note { display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; line-height: 1.5; color: var(--muted); background: rgba(124,58,237,.06); border-radius: 12px; padding: 11px 12px; }
+  .note svg { width: 14px; height: 14px; color: var(--violet-500); flex: none; margin-top: 1px; }
+
+  .empty { text-align: center; padding: 48px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .empty .ico { width: 56px; height: 56px; border-radius: 18px; background: rgba(124,58,237,.1); color: var(--violet-500); display: flex; align-items: center; justify-content: center; }
+  .empty .ico svg { width: 26px; height: 26px; }
+  .empty b { font-size: 14px; }
+  .empty p { font-size: 12px; color: var(--muted); line-height: 1.5; max-width: 240px; }
+
+  .pairgrids { display: flex; gap: 8px; }
+  .pairgrids > div { flex: 1; }
+  .mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+  .mini i {
+    aspect-ratio: 1; border-radius: 7px; background: #fff; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-style: normal; font-size: 12px; color: var(--ink);
+  }
+  .mini i.hit { background: var(--violet-500); border-color: var(--violet-500); color: #fff; }
+  .cap2 { font-size: 9.5px; color: var(--muted); text-align: center; margin-top: 5px; letter-spacing: .04em; text-transform: uppercase; }
+
+  .chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip2 { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 6px 10px; border-radius: 100px; background: rgba(124,58,237,.1); color: #5b3b9c; }
+  .chip2 svg { width: 12px; height: 12px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(var(--safe-b) + 24px); transform: translate(-50%, 20px);
+    background: var(--violet-700); color: #fff; font-size: 12.5px; padding: 11px 16px; border-radius: 12px;
+    opacity: 0; pointer-events: none; transition: .22s; z-index: 50; max-width: 86vw; text-align: center;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- motion ---------- */
+  @keyframes rise { from { transform: translateY(12px); } to { transform: none; } }
+  @keyframes viewIn { from { transform: translateY(10px) scale(.997); } to { transform: none; } }
+  @keyframes shakeit { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+
+  .view.on { animation: viewIn .3s cubic-bezier(.2,.8,.2,1) both; }
+  .tile, .block, .row { animation: rise .36s cubic-bezier(.2,.8,.2,1) both; }
+
+  .tile, .block, .row, .btn, .top .back, .field { transition: transform .16s ease, box-shadow .22s ease, border-color .22s ease, background .2s ease, color .2s ease; }
+
+  .tile:active, .block-head:active { transform: scale(.975); }
+  .btn:active { transform: scale(.975); }
+  .top .back:active { transform: scale(.9); }
+
+  .tile:focus, .tile:focus-visible, .block-head:focus, .block-head:focus-visible, .btn:focus, .row:focus { outline: none; }
+
+  .tile.core { box-shadow: 0 10px 26px rgba(124,58,237,.30); border-color: transparent; }
+  .tile.core:active { transform: scale(.975); }
+
+  .block.on { border-color: rgba(124,58,237,.5); box-shadow: 0 0 0 3px rgba(124,58,237,.10), 0 10px 24px rgba(124,58,237,.12); }
+  .block-head { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 13px; background: none; border: none; cursor: pointer; font-family: var(--font); font-size: 12.5px; color: inherit; }
+  .block .ch { transition: transform .32s cubic-bezier(.2,.8,.2,1), color .2s; }
+  .block.on .ch { transform: rotate(-90deg); color: var(--violet-500); }
+  .block-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .34s cubic-bezier(.2,.8,.2,1); }
+  .block.on .block-body { grid-template-rows: 1fr; }
+  .block-inner { overflow: hidden; }
+  .block-inner .txt { padding: 0 14px 14px; font-size: 12.5px; line-height: 1.62; color: #43325f; opacity: 0; transform: translateY(-6px); transition: opacity .26s ease, transform .26s ease; }
+  .block.on .block-inner .txt { opacity: 1; transform: none; transition-delay: .09s; }
+
+  .field:focus-within { box-shadow: 0 0 0 5px rgba(124,58,237,.16); transform: translateY(-1px); }
+  .field.err { animation: shakeit .34s ease; }
+
+  .btn { position: relative; overflow: hidden; }
+  .btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120px 60px at 50% 120%, rgba(255,255,255,.28), transparent 70%); opacity: 0; transition: opacity .3s; }
+  .btn:active::after { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.4 12 20 12 20Z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.8 20.2 7.5 8 19.7l-4.3.8.8-4.3L16.5 3.8Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 19H3L12 4.5Z"/><path d="M12 10v4M12 16.8v.2"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8.5 7.5 12 4l3.5 3.5"/><path d="M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.9-6.4"/><path d="M3.5 4.5V9H8"/><path d="M12 8v4.4l3 1.8"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5.5 13.5H11l-1 7.5 8-11H12l1-7Z"/></symbol>
+</svg>
+
+<div class="app">
+  <div class="top">
+    <button class="back" id="back" aria-label="Назад"><svg><use href="#i-back"/></svg></button>
+    <div class="ava"><svg><use href="#i-spark"/></svg></div>
+    <div class="who">
+      <div class="nm" id="topName">Матрица судьбы</div>
+      <div class="st" id="topSub"><span class="live"></span>работает офлайн</div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <section class="view on" id="v-home">
+    <div>
+      <h1 class="hero-h">Твоя матрица</h1>
+      <p class="hero-p">Восемь арканов по дате рождения: характер, энергия, деньги, отношения. Считается один раз и остаётся в истории.</p>
+    </div>
+
+    <div class="fieldwrap">
+      <div class="field" id="f1">
+        <input id="d1" inputmode="numeric" autocomplete="off" placeholder="дд.мм.гггг" maxlength="10" aria-label="Дата рождения">
+        <svg id="ic1"><use href="#i-pen"/></svg>
+      </div>
+    </div>
+
+    <button class="btn" id="go"><svg><use href="#i-spark"/></svg>Собрать матрицу</button>
+
+    <div class="feat">
+      <span><svg><use href="#i-grid"/></svg>8 позиций</span>
+      <span><svg><use href="#i-bolt"/></svg>1 минута</span>
+      <span><svg><use href="#i-check"/></svg>бесплатно</span>
+    </div>
+
+    <button class="btn ghost sm" id="toHist"><svg><use href="#i-history"/></svg>История</button>
+  </section>
+
+  <!-- MATRIX -->
+  <section class="view" id="v-matrix">
+    <div class="tiles" id="tiles"></div>
+    <div id="blocks"></div>
+    <button class="btn ghost sm" id="toPair"><svg><use href="#i-heart"/></svg>Собрать пару</button>
+    <div class="note"><svg><use href="#i-check"/></svg><span>Разбор сохраняется в истории — вернуться можно в любой момент.</span></div>
+  </section>
+
+  <!-- PAIR -->
+  <section class="view" id="v-pair">
+    <div>
+      <h1 class="hero-h" style="font-size:28px;">Ваша пара</h1>
+      <p class="hero-p">Нужна одна дата — партнёра. Своя уже посчитана: <b id="ownDate">—</b></p>
+    </div>
+    <div class="fieldwrap">
+      <div class="field" id="f2">
+        <input id="d2" inputmode="numeric" autocomplete="off" placeholder="дд.мм.гггг" maxlength="10" aria-label="Дата партнёра">
+        <svg id="ic2"><use href="#i-heart"/></svg>
+      </div>
+    </div>
+    <button class="btn" id="goPair"><svg><use href="#i-heart"/></svg>Рассчитать пару</button>
+    <div id="pairOut"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view" id="v-hist">
+    <div id="histOut"></div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TG = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (TG) {
+    try {
+      TG.ready();
+      TG.expand();
+      if (TG.setHeaderColor) TG.setHeaderColor('#140a26');
+      if (TG.setBackgroundColor) TG.setBackgroundColor('#140a26');
+    } catch (e) {}
+  }
+
+  var ARCANES = [
+    { n: 'Маг', k: 'воля и слово', t: 'Ты умеешь начинать с нуля и говорить так, что слушают. Сила в действии, риск — в желании всё контролировать.' },
+    { n: 'Жрица', k: 'тишина и знание', t: 'Ты чувствуешь подтекст раньше слов. Работает, когда доверяешь внутреннему знанию, а не громким аргументам.' },
+    { n: 'Императрица', k: 'рост и забота', t: 'Твоё — создавать и выращивать: идеи, людей, уют. Риск — раствориться в чужих нуждах.' },
+    { n: 'Император', k: 'порядок и опора', t: 'Ты держишь структуру и отвечаешь за результат. Риск — жёсткость там, где нужна гибкость.' },
+    { n: 'Иерофант', k: 'смысл и правила', t: 'Тебе важно понимать, зачем, и передавать это другим. Риск — жить по чужому уставу.' },
+    { n: 'Влюблённые', k: 'выбор и связь', t: 'Твоя тема — выбирать сердцем и держать связь. Риск — застрять между двумя вариантами.' },
+    { n: 'Колесница', k: 'ход и воля', t: 'Ты быстро разгоняешься и не любишь стоять. Риск — ехать, не зная куда.' },
+    { n: 'Справедливость', k: 'счёт и баланс', t: 'Ты видишь, где нечестно, и умеешь договариваться. Риск — судить вместо того, чтобы понимать.' },
+    { n: 'Отшельник', k: 'глубина и тишина', t: 'Тебе нужны паузы, чтобы понять себя. Риск — уйти так далеко, что не найти дорогу назад.' },
+    { n: 'Колесо Фортуны', k: 'цикл и шанс', t: 'Жизнь меняется рывками, и ты умеешь ловить момент. Риск — ждать, что всё решится само.' },
+    { n: 'Сила', k: 'мягкая мощь', t: 'Ты берёшь не давлением, а выдержкой. Риск — терпеть дольше, чем стоит.' },
+    { n: 'Повешенный', k: 'пауза и другой угол', t: 'Тебе полезно остановиться, чтобы увидеть иначе. Риск — застрять в ожидании.' },
+    { n: 'Смерть', k: 'конец и обновление', t: 'Ты умеешь закрывать этапы до конца. Риск — держаться за то, что уже отжило.' },
+    { n: 'Умеренность', k: 'мера и сборка', t: 'Твоя сила — соединять несоединимое и держать темп. Риск — размывать границы.' },
+    { n: 'Дьявол', k: 'желание и власть', t: 'Ты видишь чужое желание раньше слов. Риск — жить чужими целями.' },
+    { n: 'Башня', k: 'слом и перезапуск', t: 'Резкие перемены тебя не ломают, а обнуляют. Риск — самому устраивать обвал.' },
+    { n: 'Звезда', k: 'надежда и свет', t: 'Ты видишь перспективу, когда другие не видят. Риск — витать в будущем.' },
+    { n: 'Луна', k: 'интуиция и туман', t: 'Ты чувствуешь скрытое, но не всегда можешь объяснить. Риск — додумывать за других.' },
+    { n: 'Солнце', k: 'ясность и радость', t: 'Твоё — выводить на свет и делать простое. Риск — игнорировать тень.' },
+    { n: 'Суд', k: 'зов и итог', t: 'Ты слышишь призвание и умеешь собирать прошлое в смысл. Риск — жить чужими ожиданиями.' },
+    { n: 'Мир', k: 'целостность и выход', t: 'Ты умеешь доводить до конца и видеть целое. Риск — закрыться в готовом.' },
+    { n: 'Шут', k: 'свобода и начало', t: 'Ты легко начинаешь заново и не боишься пустоты. Риск — не доводить до конца.' }
+  ];
+
+  var POSITIONS = [
+    { key: 'a', t: 'Личность', s: 'как ты входишь в мир' },
+    { key: 'b', t: 'Энергия', s: 'откуда берёшь силы' },
+    { key: 'c', t: 'Финансы', s: 'на чём растёшь' },
+    { key: 'e', t: 'Род', s: 'что пришло из семьи' },
+    { key: 'f', t: 'Отношения', s: 'кого притягиваешь' },
+    { key: 'g', t: 'Уроки', s: 'что повторяется' },
+    { key: 'h', t: 'Рост', s: 'куда двигаться' }
+  ];
+
+  var FRAMES = {
+    a: 'Как ты входишь в мир.',
+    b: 'Откуда берёшь силы и где теряешь.',
+    c: 'На чём растёшь и как обращаешься с деньгами.',
+    d: 'Куда тянет, когда никто не смотрит.',
+    e: 'Что пришло из семьи и что можно не повторять.',
+    f: 'Кого притягиваешь и как строишь близость.',
+    g: 'Что повторяется, пока не будет пройдено.',
+    h: 'Куда двигаться, чтобы стало больше тебя.'
+  };
+
+  function reduce(n) {
+    n = Math.abs(n);
+    while (n > 22) n -= 22;
+    if (n === 0) n = 22;
+    return n;
+  }
+
+  function digitsSum(str) {
+    var s = String(str), sum = 0;
+    for (var i = 0; i < s.length; i++) sum += parseInt(s.charAt(i), 10);
+    return sum;
+  }
+
+  function parseDate(str) {
+    var m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(str || '');
+    if (!m) return null;
+    var d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return { d: d, m: mo, y: y, dt: dt };
+  }
+
+  function age(dt) {
+    var now = new Date();
+    var a = now.getFullYear() - dt.getFullYear();
+    var md = now.getMonth() - dt.getMonth();
+    if (md < 0 || (md === 0 && now.getDate() < dt.getDate())) a--;
+    return a;
+  }
+
+  function calc(p) {
+    var a = reduce(p.d);
+    var b = reduce(p.m);
+    var c = reduce(digitsSum(p.y));
+    var d = reduce(a + b + c);
+    var e = reduce(a + d);
+    var f = reduce(b + d);
+    var g = reduce(c + d);
+    var h = reduce(d + e + f + g);
+    return { a: a, b: b, c: c, d: d, e: e, f: f, g: g, h: h };
+  }
+
+  function arc(n) { return ARCANES[(n - 1 + 22) % 22]; }
+
+  /* ---------- storage ---------- */
+  var KEY = 'matrix_history_v1';
+  function loadHist() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveHist(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, 30))); } catch (e) {}
+  }
+  function pushHist(rec) {
+    var list = loadHist();
+    list.unshift(rec);
+    saveHist(list);
+  }
+
+  /* ---------- mask ---------- */
+  function mask(v) {
+    var d = String(v).replace(/\D/g, '').slice(0, 8);
+    var out = d;
+    if (d.length > 2) out = d.slice(0, 2) + '.' + d.slice(2);
+    if (d.length > 4) out = d.slice(0, 2) + '.' + d.slice(2, 4) + '.' + d.slice(4);
+    return out;
+  }
+
+  function bindMask(input) {
+    input.addEventListener('input', function () {
+      var pos = input.selectionStart;
+      var before = input.value.length;
+      input.value = mask(input.value);
+      var diff = input.value.length - before;
+      if (pos !== null) input.setSelectionRange(pos + diff, pos + diff);
+      input.closest('.field').classList.remove('err');
+    });
+  }
+
+  /* ---------- ui ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var views = { home: $('v-home'), matrix: $('v-matrix'), pair: $('v-pair'), hist: $('v-hist') };
+  var titles = { home: ['Матрица судьбы', 'работает офлайн'], matrix: ['Твоя матрица', 'восемь арканов'], pair: ['Пара', 'две карты'], hist: ['История', 'сохранённые разборы'] };
+  var current = 'home';
+  var stack = [];
+  var state = { date: '', nums: null, parsed: null };
+
+  function show(name, push) {
+    if (push !== false && name !== current) stack.push(current);
+    current = name;
+    Object.keys(views).forEach(function (k) { views[k].classList.toggle('on', k === name); });
+    $('back').classList.toggle('on', name !== 'home');
+    $('topName').textContent = titles[name][0];
+    $('topSub').innerHTML = (name === 'home' ? '<span class="live"></span>' : '') + titles[name][1];
+    views[name].scrollTop = 0;
+  }
+
+  $('back').addEventListener('click', function () {
+    var prev = stack.pop() || 'home';
+    show(prev, false);
+  });
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { t.classList.remove('on'); }, 2200);
+  }
+
+  function fail(fieldId) {
+    var f = $(fieldId);
+    f.classList.add('err');
+    var input = f.querySelector('input');
+    input.focus();
+    if (TG && TG.HapticFeedback) { try { TG.HapticFeedback.notificationOccurred('error'); } catch (e) {} }
+  }
+
+  /* ---------- render matrix ---------- */
+  function setActiveTile(k) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tile'), function (el) {
+      el.classList.toggle('core', !!k && el.getAttribute('data-k') === k);
+    });
+  }
+
+  function openBlock(k, doScroll) {
+    Array.prototype.forEach.call(document.querySelectorAll('.block'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-k') === k);
+    });
+    setActiveTile(k);
+    if (doScroll) {
+      var target = document.querySelector('.block[data-k="' + k + '"]');
+      if (target) setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 90);
+    }
+  }
+
+  function renderMatrix(nums, dateStr) {
+    var order = ['a', 'b', 'c', 'e', 'f', 'g', 'h'];
+
+    var html = '<button class="tile" data-k="d" style="animation-delay:0ms"><span class="n">' + nums.d +
+      '</span><span><span class="t">предназначение</span><span class="a">' + arc(nums.d).n + '</span></span></button>';
+    order.forEach(function (k, i) {
+      var p = POSITIONS.filter(function (x) { return x.key === k; })[0];
+      html += '<button class="tile" data-k="' + k + '" style="animation-delay:' + ((i + 1) * 45) + 'ms"><span class="n">' + nums[k] +
+        '</span><span><span class="t">' + p.t + '</span><span class="a">' + arc(nums[k]).n + '</span></span></button>';
+    });
+    $('tiles').innerHTML = html;
+
+    var keys = ['d'].concat(order);
+    var blocks = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    keys.forEach(function (k, i) {
+      var n = nums[k];
+      var a = arc(n);
+      var title = k === 'd' ? 'Предназначение' : POSITIONS.filter(function (x) { return x.key === k; })[0].t;
+      var sub = k === 'd' ? 'ядро матрицы' : POSITIONS.filter(function (x) { return x.key === k; })[0].s;
+      blocks += '<div class="block' + (i === 0 ? ' on' : '') + '" data-k="' + k + '" style="animation-delay:' + (i * 45) + 'ms">' +
+        '<button class="block-head"><span class="num">' + n + '</span><span class="tx">' + title + ' · ' + a.n +
+        '<small>' + sub + '</small></span><svg class="ch"><use href="#i-back"/></svg></button>' +
+        '<div class="block-body"><div class="block-inner"><div class="txt">' + FRAMES[k] + ' ' + a.t + '</div></div></div></div>';
+    });
+    blocks += '</div>';
+    $('blocks').innerHTML = blocks;
+
+    $('ownDate').textContent = dateStr;
+    setActiveTile('d');
+
+    Array.prototype.forEach.call(document.querySelectorAll('.tile'), function (el) {
+      el.addEventListener('click', function () {
+        openBlock(el.getAttribute('data-k'), true);
+        el.blur();
+        if (TG && TG.HapticFeedback) { try { TG.HapticFeedback.selectionChanged(); } catch (e) {} }
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.block-head'), function (head) {
+      head.addEventListener('click', function () {
+        var b = head.parentNode;
+        var k = b.getAttribute('data-k');
+        if (b.classList.contains('on')) {
+          b.classList.remove('on');
+          setActiveTile('');
+        } else {
+          openBlock(k, false);
+        }
+        head.blur();
+        if (TG && TG.HapticFeedback) { try { TG.HapticFeedback.selectionChanged(); } catch (e) {} }
+      });
+    });
+  }
+
+  /* ---------- actions ---------- */
+  bindMask($('d1'));
+  bindMask($('d2'));
+
+  $('go').addEventListener('click', function () {
+    var val = $('d1').value;
+    var p = parseDate(val);
+    if (!p || p.dt > new Date() || age(p.dt) < 14) { fail('f1'); return; }
+    state.date = val;
+    state.parsed = p;
+    state.nums = calc(p);
+    renderMatrix(state.nums, val);
+    pushHist({ id: Date.now(), ts: Date.now(), type: 'self', date: val, nums: state.nums });
+    if (TG && TG.HapticFeedback) { try { TG.HapticFeedback.impactOccurred('light'); } catch (e) {} }
+    show('matrix');
+  });
+
+  $('d1').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('go').click(); });
+
+  $('toPair').addEventListener('click', function () { show('pair'); });
+
+  $('toHist').addEventListener('click', function () {
+    renderHist();
+    show('hist');
+  });
+
+  $('goPair').addEventListener('click', function () {
+    if (!state.nums) { show('home'); return; }
+    var val = $('d2').value;
+    var p = parseDate(val);
+    if (!p || p.dt > new Date() || age(p.dt) < 14) { fail('f2'); return; }
+    var other = calc(p);
+    var own = state.nums;
+
+    var setA = ['a','b','c','d','e','f','g','h'].map(function (k) { return own[k]; });
+    var setB = ['a','b','c','d','e','f','g','h'].map(function (k) { return other[k]; });
+    var common = [];
+    setA.forEach(function (v) {
+      if (setB.indexOf(v) !== -1 && common.indexOf(v) === -1) common.push(v);
+    });
+    common = common.slice(0, 4);
+
+    function mini(nums, hits, cap) {
+      var ks = ['a','b','c','d','e','f','g','h'];
+      var s = '<div><div class="mini">';
+      ks.forEach(function (k) {
+        var v = nums[k];
+        s += '<i class="' + (hits.indexOf(v) !== -1 ? 'hit' : '') + '">' + v + '</i>';
+      });
+      s += '</div><div class="cap2">' + cap + '</div></div>';
+      return s;
+    }
+
+    var out = '<div class="pairgrids">' + mini(own, common, state.date) + mini(other, common, val) + '</div>';
+    out += '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">';
+    if (common.length) {
+      out += '<div class="chiprow">' + common.map(function (v) {
+        return '<span class="chip2"><svg><use href="#i-heart"/></svg>' + v + ' · ' + arc(v).n + '</span>';
+      }).join('') + '</div>';
+      var first = arc(common[0]);
+      out += '<div class="block" open style="display:block;"><div class="body" style="padding:14px;">' +
+        '<div style="font-family:var(--serif);font-size:17px;margin-bottom:6px;">Общая точка — ' + common[0] + ', ' + first.n + '</div>' +
+        first.t + ' В паре это работает как общий язык: на нём проще договариваться и труднее обманывать друг друга.</div></div>';
+    } else {
+      out += '<div class="note"><svg><use href="#i-warn"/></svg><span>Общих арканов нет — вы редко совпадаете по темам, и это тоже ответ: близость здесь строится на договорённостях, а не на совпадении.</span></div>';
+    }
+    out += '</div>';
+    $('pairOut').innerHTML = out;
+    pushHist({ id: Date.now(), ts: Date.now(), type: 'pair', date: state.date, date2: val, nums: own, nums2: other, common: common });
+    if (TG && TG.HapticFeedback) { try { TG.HapticFeedback.notificationOccurred('success'); } catch (e) {} }
+  });
+
+  function fmt(ts) {
+    var d = new Date(ts);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear();
+  }
+
+  function renderHist() {
+    var list = loadHist();
+    if (!list.length) {
+      $('histOut').innerHTML = '<div class="empty"><div class="ico"><svg><use href="#i-history"/></svg></div><b>Пока пусто</b><p>Собери первую матрицу — она появится здесь и откроется без повторного расчёта.</p><button class="btn sm" id="emptyGo">Собрать матрицу</button></div>';
+      var b = $('emptyGo');
+      if (b) b.addEventListener('click', function () { show('home'); });
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    list.forEach(function (r, i) {
+      var t = r.type === 'pair' ? 'пара · ' + r.date2 : 'твоя матрица';
+      var n = r.type === 'pair' ? (r.common && r.common.length ? r.common[0] : r.nums.d) : r.nums.d;
+      html += '<button class="row" data-i="' + i + '"><span class="num">' + n + '</span><span class="tx">' + r.date + ' · ' + fmt(r.ts) + '<small>' + t + '</small></span><svg class="ch"><use href="#i-back"/></svg></button>';
+    });
+    html += '</div>';
+    $('histOut').innerHTML = html;
+    Array.prototype.forEach.call($('histOut').querySelectorAll('.row'), function (el, i) {
+      el.style.animationDelay = (i * 40) + 'ms';
+      el.addEventListener('click', function () {
+        var r = list[parseInt(el.getAttribute('data-i'), 10)];
+        state.date = r.date;
+        state.nums = r.nums;
+        renderMatrix(r.nums, r.date);
+        show('matrix');
+      });
+    });
+  }
+
+  /* ---------- share ---------- */
+  function shareText() {
+    if (!state.nums) return;
+    var t = 'Моя матрица на ' + state.date + ': центр — ' + state.nums.d + ', ' + arc(state.nums.d).n + '.';
+    if (navigator.share) {
+      navigator.share({ text: t }).catch(function () {});
+    } else {
+      toast('Текст скопирован');
+      try { navigator.clipboard.writeText(t); } catch (e) {}
+    }
+  }
+
+  show('home', false);
+})();
+</script>
+</body>
+</html>
